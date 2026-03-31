@@ -1,0 +1,74 @@
+{
+  "entities": {
+    "Challenge": {
+      "title": "Challenge",
+      "description": "A coding problem with description and metadata.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "Title of the challenge" },
+        "description": { "type": "string", "description": "Markdown description of the problem" },
+        "difficulty": { "type": "string", "enum": ["Easy", "Medium", "Hard"], "description": "Difficulty level" },
+        "tags": { "type": "array", "items": { "type": "string" }, "description": "Tags for categorization" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" },
+        "authorUid": { "type": "string", "description": "UID of the creator" }
+      },
+      "required": ["title", "description", "difficulty", "authorUid"]
+    },
+    "TestCase": {
+      "title": "TestCase",
+      "description": "An input/output pair to verify solutions.",
+      "type": "object",
+      "properties": {
+        "input": { "type": "string", "description": "Input for the test case" },
+        "expectedOutput": { "type": "string", "description": "Expected output for the test case" },
+        "isHidden": { "type": "boolean", "description": "Whether the test case is hidden from the user" }
+      },
+      "required": ["input", "expectedOutput"]
+    },
+    "Submission": {
+      "title": "Submission",
+      "description": "A user's code submission for a challenge.",
+      "type": "object",
+      "properties": {
+        "challengeId": { "type": "string", "description": "ID of the challenge" },
+        "userId": { "type": "string", "description": "UID of the user" },
+        "code": { "type": "string", "description": "The submitted code" },
+        "language": { "type": "string", "description": "Programming language used" },
+        "status": { "type": "string", "enum": ["Pending", "Accepted", "Wrong Answer", "Runtime Error", "Compilation Error"], "description": "Status of the submission" },
+        "results": { "type": "array", "items": { "type": "object" }, "description": "Detailed results for each test case" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Submission timestamp" }
+      },
+      "required": ["challengeId", "userId", "code", "language", "status"]
+    },
+    "User": {
+      "title": "User",
+      "description": "User profile and role information.",
+      "type": "object",
+      "properties": {
+        "displayName": { "type": "string", "description": "User's display name" },
+        "email": { "type": "string", "description": "User's email" },
+        "role": { "type": "string", "enum": ["admin", "user"], "description": "User's role" },
+        "photoURL": { "type": "string", "description": "User's photo URL" }
+      },
+      "required": ["email", "role"]
+    }
+  },
+  "firestore": {
+    "/challenges/{challengeId}": {
+      "schema": "Challenge",
+      "description": "Collection of coding challenges"
+    },
+    "/challenges/{challengeId}/testCases/{testCaseId}": {
+      "schema": "TestCase",
+      "description": "Test cases for a specific challenge"
+    },
+    "/submissions/{submissionId}": {
+      "schema": "Submission",
+      "description": "User submissions for challenges"
+    },
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles"
+    }
+  }
+}

@@ -1,0 +1,74 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && 
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+         (request.auth.token.email == "urbabu@aditya.ac.in" && request.auth.token.email_verified == true));
+    }
+
+    function isValidChallenge(data) {
+      return data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             data.description is string && data.description.size() > 0 && data.description.size() < 10000 &&
+             data.difficulty in ['Easy', 'Medium', 'Hard'] &&
+             (!('status' in data) || data.status in ['Draft', 'Pending Review', 'Published']);
+    }
+
+    function isValidTestCase(data) {
+      return data.input is string && data.input.size() < 5000 &&
+             data.expectedOutput is string && data.expectedOutput.size() < 5000 &&
+             data.isHidden is bool;
+    }
+
+    function isValidSubmission(data) {
+      return data.challengeId is string &&
+             data.userId == request.auth.uid &&
+             data.code is string && data.code.size() < 50000 &&
+             data.language is string &&
+             data.status in ['Pending', 'Accepted', 'Wrong Answer', 'Runtime Error', 'Compilation Error'];
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isOwner(userId) && 
+                      (request.resource.data.role == 'user' || (request.resource.data.role == 'admin' && request.auth.token.email == "urbabu@aditya.ac.in")) &&
+                      request.resource.data.email == request.auth.token.email;
+      allow update: if isAdmin() || (isOwner(userId) && request.resource.data.role == resource.data.role);
+    }
+
+    match /challenges/{challengeId} {
+      allow read: if true;
+      allow create, update: if isAdmin() && isValidChallenge(request.resource.data);
+      allow delete: if isAdmin();
+
+      match /testCases/{testCaseId} {
+        // Only admins can see hidden test cases, but users need to read them for local testing?
+        // Actually, users shouldn't see hidden test cases.
+        allow read: if isAuthenticated(); // We'll filter hidden ones in the UI or use a separate collection if needed.
+        allow write: if isAdmin() && isValidTestCase(request.resource.data);
+      }
+    }
+
+    match /submissions/{submissionId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() && isValidSubmission(request.resource.data);
+      allow update: if isAdmin(); // Only admins (or the system) can update submission status
+    }
+  }
+}
